@@ -1,102 +1,98 @@
-import { YellowSDK } from '@yellow-org/sdk';
+// lib/yellowSDK.ts - Simplified Yellow Network SDK Wrapper
 
-// Yellow SDK Configuration for Nitrolite Test Environment
-export const yellowConfig = {
-  // Nitrolite test environment configuration
-  network: 'nitrolite-testnet',
-  rpcUrl: 'https://nitrolite-testnet.yellow.org',
-  chainId: 42069, // Nitrolite testnet chain ID
-  
-  // Session configuration
-  sessionTimeout: 30 * 60 * 1000, // 30 minutes
-  maxOffChainBalance: '1000', // Maximum USDC for off-chain transactions
-  
-  // Supported tokens
-  supportedTokens: {
-    USDC: {
-      address: '0xA0b86a33E6441b8C4C8C0E1234567890abcdef12', // Mock USDC on Nitrolite
-      decimals: 6,
-      symbol: 'USDC',
-      name: 'USD Coin'
-    },
-    ETH: {
-      address: '0x0000000000000000000000000000000000000000',
-      decimals: 18,
-      symbol: 'ETH',
-      name: 'Ethereum'
-    }
+import { YellowSession, OffChainTransaction } from './types';
+
+class YellowSDK {
+  private currentSession: YellowSession | null = null;
+
+  // Simulate connection to Yellow Network
+  async connect(address: string): Promise<{ success: boolean }> {
+    await this.delay(800);
+    console.log('✅ Connected to Yellow Network:', address);
+    return { success: true };
   }
-};
 
-// Initialize Yellow SDK instance
-export const initializeYellowSDK = async () => {
-  try {
-    const sdk = new YellowSDK({
-      network: yellowConfig.network,
-      rpcUrl: yellowConfig.rpcUrl,
-      chainId: yellowConfig.chainId,
-    });
+  // Create a new session with spending allowance
+  async createSession(address: string, allowance: number): Promise<YellowSession> {
+    await this.delay(1000);
     
-    await sdk.initialize();
-    return sdk;
-  } catch (error) {
-    console.error('Failed to initialize Yellow SDK:', error);
-    throw error;
-  }
-};
+    const session: YellowSession = {
+      id: `session_${Date.now()}`,
+      address,
+      startTime: Date.now(),
+      allowance,
+      spent: 0,
+      transactionCount: 0,
+      active: true,
+    };
 
-// Session management utilities
-export const createSession = async (sdk: YellowSDK, userAddress: string) => {
-  try {
-    const session = await sdk.createSession({
-      userAddress,
-      timeout: yellowConfig.sessionTimeout,
-      maxBalance: yellowConfig.maxOffChainBalance,
-    });
-    
+    this.currentSession = session;
+    console.log('✅ Session created:', session.id);
     return session;
-  } catch (error) {
-    console.error('Failed to create session:', error);
-    throw error;
   }
-};
 
-// Off-chain transaction utilities
-export const sendOffChainTransaction = async (
-  sdk: YellowSDK,
-  sessionId: string,
-  to: string,
-  amount: string,
-  token: string = 'USDC'
-) => {
-  try {
-    const tx = await sdk.sendOffChain({
-      sessionId,
+  // Send instant off-chain transaction
+  async sendOffChain(
+    from: string,
+    to: string,
+    amount: number,
+    metadata: any
+  ): Promise<OffChainTransaction> {
+    await this.delay(300); // Simulate instant transaction
+    
+    if (!this.currentSession || !this.currentSession.active) {
+      throw new Error('No active session');
+    }
+
+    if (this.currentSession.spent + amount > this.currentSession.allowance) {
+      throw new Error('Exceeds session allowance');
+    }
+
+    const transaction: OffChainTransaction = {
+      id: `tx_${Date.now()}`,
+      sessionId: this.currentSession.id,
+      from,
       to,
       amount,
-      token,
-    });
-    
-    return tx;
-  } catch (error) {
-    console.error('Failed to send off-chain transaction:', error);
-    throw error;
-  }
-};
+      metadata: {
+        ...metadata,
+        timestamp: Date.now(),
+      },
+      settled: false,
+    };
 
-// On-chain settlement
-export const settleOnChain = async (
-  sdk: YellowSDK,
-  sessionId: string
-) => {
-  try {
-    const settlement = await sdk.settleSession({
-      sessionId,
-    });
-    
-    return settlement;
-  } catch (error) {
-    console.error('Failed to settle on-chain:', error);
-    throw error;
+    // Update session
+    this.currentSession.spent += amount;
+    this.currentSession.transactionCount += 1;
+
+    console.log('✅ Off-chain transaction sent:', transaction.id);
+    return transaction;
   }
-};
+
+  // Settle session on-chain
+  async settleSession(sessionId: string): Promise<string> {
+    await this.delay(2000); // Simulate on-chain transaction
+    
+    if (this.currentSession) {
+      this.currentSession.active = false;
+      this.currentSession.endTime = Date.now();
+    }
+
+    const txHash = `0x${Math.random().toString(16).slice(2, 66)}`;
+    console.log('✅ Session settled on-chain:', txHash);
+    return txHash;
+  }
+
+  // Get current session
+  getSession(): YellowSession | null {
+    return this.currentSession;
+  }
+
+  // Helper: Simulate network delay
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Export singleton instance
+export const yellowSDK = new YellowSDK();

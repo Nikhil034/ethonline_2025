@@ -53,7 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           showRecentTransactions={true}
           appInfo={{
             appName: 'Yellow Instant Tip',
-            disclaimer: ({ Text, Link }) => (
+            disclaimer: ({ Text, Link }: { Text: any; Link: any }) => (
               <Text>
                 By connecting your wallet, you agree to the{' '}
                 <Link href="https://yellow.org/terms">Terms of Service</Link> and{' '}

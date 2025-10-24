@@ -12,7 +12,8 @@ import {
   DollarSign,
   TrendingUp,
   Users,
-  Award
+  Award,
+  Heart
 } from 'lucide-react';
 
 interface TransactionHistoryProps {

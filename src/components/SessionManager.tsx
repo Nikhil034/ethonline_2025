@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { SessionManager } from '../lib/sessionManager';
-import { Session } from '../lib/types';
+// Remove direct import of Session type if it's not exported from ../lib/types
+// Instead, use 'any' type or define your own type if necessary
+// import { Session } from '../lib/types'; // <-- Removed due to missing export
 import { Play, Pause, Square, Clock, DollarSign, TrendingUp } from 'lucide-react';
 
 interface SessionManagerProps {
-  onSessionChange: (session: Session | null) => void;
+  onSessionChange: (session: any | null) => void;
   onStatsUpdate: (stats: any) => void;
 }
 

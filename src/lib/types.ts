@@ -1,4 +1,4 @@
-// lib/types.ts - Type Definitions
+// lib/types.ts - Type Definitions for Nitrolite Integration
 
 export interface User {
   id: string;
@@ -17,6 +17,10 @@ export interface YellowSession {
   spent: number;
   transactionCount: number;
   active: boolean;
+  // Nitrolite specific fields
+  channelId?: string;
+  applicationId?: string;
+  participants?: string[];
 }
 
 export interface OffChainTransaction {
@@ -26,9 +30,14 @@ export interface OffChainTransaction {
   to: string;
   amount: number;
   metadata: {
+    creatorName: any;
+    contentTitle: any;
     reaction: string;
     type: 'tip' | 'payment';
     timestamp: number;
+    // Nitrolite specific fields
+    stateUpdateId?: string;
+    channelId?: string;
   };
   settled: boolean;
   settlementTxHash?: string;
@@ -48,4 +57,27 @@ export interface ContentAnalysis {
   score: number;
   reasoning: string;
   suggestedTip: number;
+}
+
+// Nitrolite SDK specific types
+export interface NitroliteConfig {
+  channelId: string;
+  clearNodeUrl: string;
+  authToken?: string;
+}
+
+export interface StateUpdate {
+  type: 'payment' | 'tip' | 'settlement';
+  from: string;
+  to: string;
+  amount: number;
+  metadata: Record<string, any>;
+}
+
+export interface ApplicationSession {
+  sessionId: string;
+  applicationId: string;
+  participants: string[];
+  metadata: Record<string, any>;
+  status: 'active' | 'closed' | 'settled';
 }

@@ -70,7 +70,7 @@ export function AIAssistant() {
             <h3 className="font-bold text-gray-900">AI Tipping Assistant</h3>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <p className="text-sm text-gray-600">Online • Powered by ASI:One</p>
+              <p className="text-sm text-gray-600">Online</p>
             </div>
           </div>
         </div>
@@ -154,7 +154,7 @@ export function AIAssistant() {
         </div>
         <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
           <Sparkles className="w-3 h-3" />
-          Powered by MeTTa reasoning and ASI:One
+          Helpful AI Assistant
         </p>
       </div>
     </div>

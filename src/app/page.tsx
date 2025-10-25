@@ -4,43 +4,48 @@ import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { WalletConnect } from '../components/WalletConnect';
 import { AIAssistant } from '@/components/AIAssistant';
-import { Zap, Bot, Brain, Sparkles, Send, History } from 'lucide-react';
-import { yellowSDK } from '../lib/yellowConfig';
+import { ContentFeed } from '@/components/ContentFeed';
+import { Leaderboard } from '@/components/Leaderboard';
+import { Zap, Bot, Brain, Sparkles, Send, History, TrendingUp, Users } from 'lucide-react';
+import { hybridNitroliteSDK } from '../lib/hybridNitroliteConfig';
 import { MOCK_USERS, REACTIONS, TIP_AMOUNT } from '@/lib/constants';
+import { MOCK_CREATORS, MOCK_CONTENT, getAllContent, getTopCreators } from '@/lib/creatorData';
 import { YellowSession, OffChainTransaction, User } from '@/lib/types';
 
 export default function HomePage() {
   const { address, isConnected } = useAccount();
   const [session, setSession] = useState<YellowSession | null>(null);
-  const [activeTab, setActiveTab] = useState<'tip' | 'ai' | 'history'>('tip');
+  const [activeTab, setActiveTab] = useState<'content' | 'leaderboard' | 'ai' | 'history'>('content');
   const [transactions, setTransactions] = useState<OffChainTransaction[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedReaction, setSelectedReaction] = useState(REACTIONS[0]);
   const [loading, setLoading] = useState(false);
+  const [leaderboardSort, setLeaderboardSort] = useState<'tips' | 'rating' | 'followers'>('tips');
 
-  // Create Yellow session
+  // Create Yellow session using Hybrid Nitrolite
   const createSession = async () => {
     if (!address) return;
     
     setLoading(true);
     try {
-      await yellowSDK.connect(address);
-      const newSession = await yellowSDK.createSession(address, 50);
+      await hybridNitroliteSDK.connect(address);
+      const newSession = await hybridNitroliteSDK.createSession(address, 50);
       setSession(newSession);
     } catch (error) {
       console.error('Failed to create session:', error);
+      alert('Failed to create session. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Send tip
+  // Send tip using Hybrid Nitrolite
   const sendTip = async (toUser: User) => {
     if (!address || !session) return;
     
     setLoading(true);
     try {
-      const tx = await yellowSDK.sendOffChain(
+      const tx = await hybridNitroliteSDK.sendOffChain(
         address,
         toUser.address,
         TIP_AMOUNT,
@@ -48,30 +53,73 @@ export default function HomePage() {
       );
       
       setTransactions(prev => [tx, ...prev]);
-      setSession(yellowSDK.getSession());
+      setSession(hybridNitroliteSDK.getSession());
       setSelectedUser(null);
     } catch (error) {
       console.error('Failed to send tip:', error);
-      alert('Failed to send tip. Please try again.');
+      alert('Failed to send tip. Please check your session and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Settle session
+  // Handle content tip
+  const handleContentTip = async (contentId: string, amount: number) => {
+    if (!address || !session) {
+      alert('Please connect your wallet and start a session first');
+      return;
+    }
+
+    try {
+      // Find the content to get creator info
+      const content = MOCK_CONTENT.find(c => c.id === contentId);
+      if (!content) return;
+
+      const creator = MOCK_CREATORS.find(c => c.id === content.creatorId);
+      if (!creator) return;
+
+      // Send tip using hybrid Nitrolite SDK
+      const tx = await hybridNitroliteSDK.sendOffChain(
+        address,
+        creator.handle, // Using handle as address for demo
+        amount,
+        {
+          reaction: '💝',
+          type: 'tip',
+          contentId: contentId,
+          contentTitle: content.title,
+          creatorName: creator.name
+        }
+      );
+
+      // Add to transactions
+      setTransactions(prev => [tx, ...prev]);
+      
+      // Update session
+      setSession(hybridNitroliteSDK.getSession());
+      
+      console.log(`Tip sent for content ${contentId}: $${amount}`);
+    } catch (error) {
+      console.error('Failed to send tip:', error);
+      alert('Failed to send tip. Please try again.');
+    }
+  };
+
+  // Settle session using Hybrid Nitrolite
   const settleSession = async () => {
     if (!session) return;
     
     setLoading(true);
     try {
-      const txHash = await yellowSDK.settleSession(session.id);
+      const txHash = await hybridNitroliteSDK.settleSession(session.id);
       setTransactions(prev => 
         prev.map(tx => ({ ...tx, settled: true, settlementTxHash: txHash }))
       );
-      setSession(yellowSDK.getSession());
+      setSession(hybridNitroliteSDK.getSession());
       alert('Session settled successfully! TX: ' + txHash.slice(0, 10) + '...');
     } catch (error) {
       console.error('Failed to settle:', error);
+      alert('Failed to settle session. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -100,11 +148,11 @@ export default function HomePage() {
                 </h1>
                 <p className="text-xs text-gray-600 flex items-center gap-2">
                   <span>Yellow Network</span>
-                  <span>•</span>
+                  {/* <span>•</span>
                   <span className="flex items-center gap-1">
                     <Brain className="w-3 h-3" />
                     ASI Alliance
-                  </span>
+                  </span> */}
                 </p>
               </div>
             </div>
@@ -131,10 +179,10 @@ export default function HomePage() {
                 <Sparkles className="w-4 h-4" />
                 Yellow Network
               </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
+              {/* <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
                 <Brain className="w-4 h-4" />
                 ASI Alliance
-              </div>
+              </div> */}
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-12">
@@ -181,7 +229,7 @@ export default function HomePage() {
 
             <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-purple-500 rounded-2xl p-1">
               <div className="bg-white rounded-xl p-8">
-                <h3 className="text-2xl font-bold mb-6">How It Works</h3>
+                <h3 className="text-2xl font-bold mb-6 text-gray-900">How It Works</h3>
                 <div className="grid md:grid-cols-4 gap-6">
                   {[
                     { num: 1, title: 'Connect', desc: 'Link your wallet' },
@@ -204,6 +252,22 @@ export default function HomePage() {
         ) : (
           /* App Interface */
           <div className="space-y-6">
+            {/* Development Mode Indicator */}
+            {/* <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 border border-blue-200">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse" />
+                <div>
+                  <h3 className="font-bold text-gray-900">Development Mode</h3>
+                  <p className="text-sm text-gray-600">
+                    🔧 Simulating channel creation and USDC funding. 
+                    <a href="/FUNDING_GUIDE.md" className="text-blue-600 hover:underline ml-1">
+                      Get USDC on Base for production mode →
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </div> */}
+
             {/* Session Info */}
             {session && (
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border border-green-200">
@@ -251,22 +315,34 @@ export default function HomePage() {
 
             {/* Tabs */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-2">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <button
-                  onClick={() => setActiveTab('tip')}
-                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
-                    activeTab === 'tip'
+                  onClick={() => setActiveTab('content')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
+                    activeTab === 'content'
                       ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg'
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  <Send className="w-5 h-5" />
-                  <span className="hidden sm:inline">Send Tips</span>
+                  <Sparkles className="w-5 h-5" />
+                  <span className="hidden sm:inline">Content</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('leaderboard')}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
+                    activeTab === 'leaderboard'
+                      ? 'bg-gradient-to-r from-purple-400 to-blue-500 text-white shadow-lg'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <TrendingUp className="w-5 h-5" />
+                  <span className="hidden sm:inline">Leaderboard</span>
                 </button>
 
                 <button
                   onClick={() => setActiveTab('ai')}
-                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
                     activeTab === 'ai'
                       ? 'bg-gradient-to-r from-purple-400 to-blue-500 text-white shadow-lg'
                       : 'text-gray-600 hover:bg-gray-50'
@@ -278,7 +354,7 @@ export default function HomePage() {
 
                 <button
                   onClick={() => setActiveTab('history')}
-                  className={`flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
                     activeTab === 'history'
                       ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg'
                       : 'text-gray-600 hover:bg-gray-50'
@@ -291,123 +367,70 @@ export default function HomePage() {
             </div>
 
             {/* Tab Content */}
-            {activeTab === 'tip' && (
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Users */}
-                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                  <h3 className="font-bold text-gray-900 mb-4">Send Tips</h3>
-                  <div className="space-y-3">
-                    {MOCK_USERS.map(user => (
-                      <button
-                        key={user.id}
-                        onClick={() => setSelectedUser(user)}
-                        className="w-full flex items-center gap-3 p-4 bg-gray-50 hover:bg-yellow-50 rounded-xl transition-all border hover:border-yellow-200"
-                      >
-                        <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center text-2xl">
-                          {user.avatar}
-                        </div>
-                        <div className="flex-1 text-left">
-                          <p className="font-semibold text-gray-900">{user.name}</p>
-                          <p className="text-sm text-gray-600">{user.address}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {activeTab === 'content' && (
+              <ContentFeed 
+                content={getAllContent()} 
+                creators={MOCK_CREATORS} 
+                onTip={handleContentTip} 
+              />
+            )}
 
-                {/* Tip Config */}
-                <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                  <h3 className="font-bold text-gray-900 mb-4">Configure Tip</h3>
-                  {selectedUser ? (
-                    <div className="space-y-6">
-                      <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                        <p className="text-sm text-gray-600 mb-2">Sending to:</p>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center text-xl">
-                            {selectedUser.avatar}
-                          </div>
-                          <p className="font-bold text-gray-900">{selectedUser.name}</p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-3">Select Reaction:</p>
-                        <div className="grid grid-cols-4 gap-3">
-                          {REACTIONS.map(reaction => (
-                            <button
-                              key={reaction}
-                              onClick={() => setSelectedReaction(reaction)}
-                              className={`aspect-square p-3 rounded-xl text-3xl transition-all ${
-                                selectedReaction === reaction
-                                  ? 'bg-yellow-400 scale-110 shadow-lg'
-                                  : 'bg-gray-100 hover:bg-gray-200'
-                              }`}
-                            >
-                              {reaction}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-gray-50 rounded-xl">
-                        <p className="text-2xl font-bold text-gray-900">${TIP_AMOUNT} USDC</p>
-                        <p className="text-xs text-gray-500">⚡ Instant & Gas-Free</p>
-                      </div>
-
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => setSelectedUser(null)}
-                          className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => sendTip(selectedUser)}
-                          disabled={loading || !session?.active}
-                          className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-semibold rounded-xl disabled:opacity-50"
-                        >
-                          {loading ? 'Sending...' : 'Send Tip'}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-16">
-                      <Send className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600">Select a user to tip</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {activeTab === 'leaderboard' && (
+              <Leaderboard 
+                creators={MOCK_CREATORS} 
+                sortBy={leaderboardSort} 
+                onSortChange={setLeaderboardSort} 
+              />
             )}
 
             {activeTab === 'ai' && <AIAssistant />}
 
             {activeTab === 'history' && (
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-                <h3 className="font-bold text-gray-900 mb-6">Transaction History</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-gray-900">Transaction History</h3>
+                  <div className="text-sm text-gray-600">
+                    {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
                 {transactions.length === 0 ? (
                   <div className="text-center py-16">
                     <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">No transactions yet</p>
+                    <p className="text-gray-600 mb-2">No transactions yet</p>
+                    <p className="text-sm text-gray-500">Start tipping creators to see your transaction history</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {transactions.map(tx => (
-                      <div key={tx.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                      <div key={tx.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
                         <div className="text-3xl">{tx.metadata.reaction}</div>
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900">
-                            {tx.from.slice(0, 10)}... → {tx.to.slice(0, 10)}...
+                            {tx.metadata.creatorName ? (
+                              `Tip to ${tx.metadata.creatorName}`
+                            ) : (
+                              `${tx.from.slice(0, 6)}... → ${tx.to.slice(0, 6)}...`
+                            )}
                           </p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(tx.metadata.timestamp).toLocaleTimeString()}
+                          {tx.metadata.contentTitle && (
+                            <p className="text-sm text-gray-600 mb-1">
+                              For: "{tx.metadata.contentTitle}"
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-500">
+                            {new Date(tx.metadata.timestamp).toLocaleString()}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-gray-900">${tx.amount}</p>
-                          <p className={`text-xs ${tx.settled ? 'text-green-600' : 'text-yellow-600'}`}>
+                          <p className={`text-xs font-medium ${tx.settled ? 'text-green-600' : 'text-yellow-600'}`}>
                             {tx.settled ? '✓ Settled' : '⚡ Off-chain'}
                           </p>
+                          {tx.settlementTxHash && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              TX: {tx.settlementTxHash.slice(0, 10)}...
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}

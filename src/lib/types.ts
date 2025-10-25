@@ -1,5 +1,57 @@
 // lib/types.ts - Type Definitions for Nitrolite Integration
 
+export interface SessionStats {
+  totalTips: number;
+  totalTransactions: number;
+  totalAmount: string;
+  averageTip: string;
+  averageTransaction: string;
+  topRecipients: {
+    address: string;
+    amount: string;
+    count: number;
+  }[];
+}
+export interface Transaction {
+  id: string;
+  from: string;
+  to: string;
+  amount: string;
+  timestamp: number;
+  status: 'pending' | 'confirmed';
+  metadata: Record<string, any>;
+  type: 'off-chain' | 'on-chain';
+  token: string;
+}
+export interface Tip {
+  id: string;
+  from: string;
+  to: string;
+  amount: string;
+  message?: string;
+  timestamp: number;
+  status: 'pending' | 'sent' | 'received';
+}
+
+export interface Session {
+  id: string;
+  userAddress: string;
+  startTime: number;
+  status: 'active' | 'ended' | 'settled';
+  offChainBalance: string;
+  totalTransactions: number;
+  endTime?: number;
+  totalTips: number;
+  totalAmount: string;
+  averageTip: string;
+  averageTransaction: string;
+  topRecipients: {
+    address: string;
+    amount: string;
+    count: number;
+  }[];
+}
+
 export interface User {
   id: string;
   address: string;

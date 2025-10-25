@@ -15,6 +15,11 @@ export class SessionManager {
       status: 'active',
       offChainBalance: '0',
       totalTransactions: 0,
+      totalTips: 0,
+      totalAmount: '0',
+      averageTip: '0',
+      averageTransaction: '0',
+      topRecipients: [],
     };
 
     this.session = session;
@@ -52,6 +57,7 @@ export class SessionManager {
       timestamp: Date.now(),
       type: 'off-chain',
       status: 'confirmed',
+      metadata: {},
     };
 
     this.transactions.push(transaction);
@@ -120,13 +126,15 @@ export class SessionManager {
         amount: data.amount.toString(),
         count: data.count,
       }))
-      .sort((a, b) => b.amount - a.amount)
+      .sort((a, b) => b.amount.localeCompare(a.amount))
       .slice(0, 5);
 
     return {
       totalTips,
-      totalAmount,
-      averageTip,
+      totalTransactions: this.transactions.length,
+      totalAmount: totalAmount.toString(),
+      averageTip: averageTip.toString(),
+      averageTransaction: '0',
       topRecipients,
     };
   }
